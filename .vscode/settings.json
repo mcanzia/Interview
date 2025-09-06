@@ -1,0 +1,15 @@
+{
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5444,
+            "driver": "PostgreSQL",
+            "name": "Bitly",
+            "database": "shortener",
+            "username": "app",
+            "password": "app_pw"
+        }
+    ]
+}
