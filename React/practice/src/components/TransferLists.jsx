@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 
 class Item {
     constructor(name, checked = false) {
@@ -11,9 +11,9 @@ export default function App() {
     const [listOne, setListOne] = useState([new Item('HTML'), new Item('JavaScript'), new Item('CSS'), new Item('TypeScript')]);
     const [listTwo, setListTwo] = useState([new Item('React'), new Item('Angular'), new Item('Vue'), new Item('Svelte')]);
 
-    const allListOneAvailable = useMemo(() => {
-        return listTwo.length;
-    });
+    function allChecked(list) {
+        return list.every((item) => item.checked);
+    }
 
     const allListTwoAvailable = useMemo(() => {
         return listOne.length;
@@ -27,104 +27,133 @@ export default function App() {
         return listOne.some((value) => value.checked);
     });
 
-    function moveAllToListOne() {
-        const newListOne = [...listOne];
-        for (let item of listTwo) {
-            newListOne.push(item);
-        }
-        setListOne(newListOne);
-        setListTwo([]);
-    }
 
-    function moveAllToListTwo() {
-        const newListTwo = [...listTwo];
-        for (let item of listOne) {
-            newListTwo.push(item);
-        }
-        setListTwo(newListTwo);
-        setListOne([]);
-    }
-
-    function moveSelectedToListOne() {
-        const newListOne = [...listOne];
-        const newListTwo = [];
-        for (let item of listTwo) {
+    function moveSelectedToOtherList(toList, toUpdateFn, fromList, fromUpdateFn) {
+        const newToList = [...toList];
+        const newFromList = [];
+        for (let item of fromList) {
             if (item.checked) {
-                newListOne.push(item);
+                newToList.push(item);
             } else {
-                newListTwo.push(item);
+                newFromList.push(item);
             }
         }
-        setListOne(newListOne);
-        setListTwo(newListTwo);
+        toUpdateFn(newToList);
+        fromUpdateFn(newFromList);
     }
 
-    function moveSelectedToListTwo() {
-        const newListTwo = [...listTwo];
-        const newListOne = [];
-        for (let item of listOne) {
-            if (item.checked) {
-                newListTwo.push(item);
-            } else {
-                newListOne.push(item);
-            }
-        }
-        setListOne(newListOne);
-        setListTwo(newListTwo);
+    function setListCheckbox(index, list, updateFunction) {
+        let newList = [...list];
+        newList[index] = new Item(newList[index].name, !newList[index].checked)
+        updateFunction(newList)
     }
 
-    function setListOneCheckbox(index) {
-        const newListOne = [...listOne];
-        newListOne[index] = new Item(newListOne[index].name, !newListOne[index].checked)
-        setListOne(newListOne)
+    function checkAllList(list, updateFunction, action) {
+        let newList = [...list];
+        newList = newList.map((item) => {
+            return { ...item, checked: action === 'check' ? true : false }
+        });
+        updateFunction(newList);
     }
 
-    function setListTwoCheckbox(index) {
-        const newListTwo = [...listTwo];
-        newListTwo[index] = new Item(newListTwo[index].name, !newListTwo[index].checked)
-        setListTwo(newListTwo)
+    function addItem(item, list, updateFunction) {
+        let newList = [...list, new Item(item)]
+        updateFunction(newList);
     }
 
     const buttonActions = {
-        allListOne: { action: moveAllToListOne, available: allListOneAvailable },
-        allListTwo: { action: moveAllToListTwo, available: allListTwoAvailable },
-        selectedListOne: { action: moveSelectedToListOne, available: selectedListOneAvailable },
-        selectedListTwo: { action: moveSelectedToListTwo, available: selectedListTwoAvailable }
+        selectedListOne: {
+            action: () => moveSelectedToOtherList(listOne, setListOne, listTwo, setListTwo),
+            available: selectedListOneAvailable
+        },
+        selectedListTwo: {
+            action: () => moveSelectedToOtherList(listTwo, setListTwo, listOne, setListOne),
+            available: selectedListTwoAvailable
+        }
     }
     return (
         <div>
             <div className="lists">
-                <ItemList items={listOne} setCheckbox={(index) => setListOneCheckbox(index)} />
+                <ItemList
+                    items={listOne}
+                    setCheckbox={(index) => setListCheckbox(index, listOne, setListOne)}
+                    allChecked={allChecked(listOne)}
+                    addItem={(item) => addItem(item, listOne, setListOne)}
+                    checkAll={(action) => checkAllList(listOne, setListOne, action)}
+                />
                 <Switcher buttonActions={buttonActions} />
-                <ItemList items={listTwo} setCheckbox={(index) => setListTwoCheckbox(index)} />
+                <ItemList
+                    items={listTwo}
+                    setCheckbox={(index) => setListCheckbox(index, listTwo, setListTwo)}
+                    allChecked={allChecked(listTwo)}
+                    addItem={(item) => addItem(item, listTwo, setListTwo)}
+                    checkAll={(action) => checkAllList(listTwo, setListTwo, action)}
+                />
             </div>
         </div>
     );
 }
 
 function Switcher({ buttonActions }) {
-    const allToListOne = "<<";
     const selectedToListOne = "<";
-    const allToListTwo = ">>";
     const selectedToListTwo = ">";
     return (
         <>
             <fieldset>
                 <ul>
-                    <button disabled={!buttonActions.allListOne.available} onClick={buttonActions.allListOne.action}>{allToListOne}</button>
                     <button disabled={!buttonActions.selectedListOne.available} onClick={buttonActions.selectedListOne.action}>{selectedToListOne}</button>
                     <button disabled={!buttonActions.selectedListTwo.available} onClick={buttonActions.selectedListTwo.action}>{selectedToListTwo}</button>
-                    <button disabled={!buttonActions.allListTwo.available} onClick={buttonActions.allListTwo.action}>{allToListTwo}</button>
                 </ul>
             </fieldset>
         </>
     )
 }
 
-function ItemList({ items, setCheckbox }) {
+function SelectAll({ items, allChecked, checkAll }) {
+    const numSelected = useMemo(() => {
+        return items.filter((value) => value.checked).length
+    }, [items])
+
+    const checkboxRef = useRef(null);
+
+    // useEffect(() => {
+    //   if (checkboxRef.current) {
+    //     checkboxRef.current.indeterminate = true;
+    //   }
+    // }, []);
+    return (
+        <>
+            <div className="selectAllBox">
+                {allChecked ?
+                    <input onChange={() => checkAll("uncheck")} ref={checkboxRef} type="checkbox" /> :
+                    <input checked={allChecked} onChange={() => checkAll("check")} type="checkbox" />}
+                <label>{numSelected} / {items.length} Selected</label>
+            </div>
+        </>
+    )
+}
+
+function ItemList({ items, setCheckbox, allChecked, checkAll, addItem }) {
+    const [addItemInput, setAddItemInput] = useState("");
+    function handleOnChange(e) {
+        setAddItemInput(e.target.value);
+    }
+
+    function handleSubmit(e) {
+        e.preventDefault();
+        addItem(addItemInput);
+        setAddItemInput("");
+    }
     return (
         <>
             <fieldset>
+                <form onSubmit={handleSubmit}>
+                    <input type="text" value={addItemInput} onChange={handleOnChange} />
+                    <button type="submit">Add</button>
+                </form>
+                <hr />
+                <SelectAll items={items} allChecked={allChecked} checkAll={checkAll} />
+                <hr />
                 <ul>
                     {
                         items.map((item, index) => (
