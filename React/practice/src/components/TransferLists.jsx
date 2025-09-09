@@ -1,4 +1,5 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, use, createContext } from 'react';
+import './TransferLists.css';
 
 class Item {
     constructor(name, checked = false) {
@@ -7,7 +8,7 @@ class Item {
     }
 }
 
-export default function App() {
+export default function TransferLists() {
     const [listOne, setListOne] = useState([new Item('HTML'), new Item('JavaScript'), new Item('CSS'), new Item('TypeScript')]);
     const [listTwo, setListTwo] = useState([new Item('React'), new Item('Angular'), new Item('Vue'), new Item('Svelte')]);
 
@@ -15,18 +16,8 @@ export default function App() {
         return list.every((item) => item.checked);
     }
 
-    const allListTwoAvailable = useMemo(() => {
-        return listOne.length;
-    });
-
-    const selectedListOneAvailable = useMemo(() => {
-        return listTwo.some((value) => value.checked);
-    });
-
-    const selectedListTwoAvailable = useMemo(() => {
-        return listOne.some((value) => value.checked);
-    });
-
+    const selectedListOneAvailable = useMemo(() => listTwo.some(i => i.checked), [listTwo]);
+    const selectedListTwoAvailable = useMemo(() => listOne.some(i => i.checked), [listOne]);
 
     function moveSelectedToOtherList(toList, toUpdateFn, fromList, fromUpdateFn) {
         const newToList = [...toList];
@@ -69,6 +60,10 @@ export default function App() {
         selectedListTwo: {
             action: () => moveSelectedToOtherList(listTwo, setListTwo, listOne, setListOne),
             available: selectedListTwoAvailable
+        },
+        addItem: {
+            action: (item, list, updateFunction) => addItem(item, list, updateFunction),
+            available: true
         }
     }
     return (
@@ -134,6 +129,7 @@ function SelectAll({ items, allChecked, checkAll }) {
 }
 
 function ItemList({ items, setCheckbox, allChecked, checkAll, addItem }) {
+
     const [addItemInput, setAddItemInput] = useState("");
     function handleOnChange(e) {
         setAddItemInput(e.target.value);

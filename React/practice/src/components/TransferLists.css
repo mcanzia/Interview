@@ -1,0 +1,23 @@
+body {
+    font-family: sans-serif;
+}
+
+ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.item {
+    display: inline-flex;
+}
+
+.lists {
+    display: inline-flex;
+}
+
+.selectAllBox {
+    display: inline-flex;
+    gap: 5px;
+}
